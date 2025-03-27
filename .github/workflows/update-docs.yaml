@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "k4pub2users2.html"
+      - "k4-pub-users2.html"
 
 jobs:
   update-docs:
