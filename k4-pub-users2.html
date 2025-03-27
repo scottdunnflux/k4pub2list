@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K4 XML User Parser</title>
+    <style>
+        /* CSS styles embedded in the page */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .upload-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .upload-section.dragover {
+            background-color: #f0f8ff;
+            border-color: #4a90e2;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn, .export-btn {
+            background-color: #4a90e2;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .export-btn {
+            background-color: #28a745;
+            margin-left: 10px;
+        }
+        
+        .upload-btn:hover {
+            background-color: #357abd;
+        }
+        
+        .export-btn:hover {
+            background-color: #218838;
+        }
+        
+        .drag-text {
+            margin-top: 10px;
+            color: #777;
+        }
+        
+        .table-controls {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .column-toggle {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        
+        .column-toggle label {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        
+        .column-toggle input {
+            margin-right: 5px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+        }
+        
+        th:hover {
+            background-color: #e6e6e6;
+        }
+        
+        th.sorted-asc::after {
+            content: "▲";
+            margin-left: 5px;
+            font-size: 12px;
+        }
+        
+        th.sorted-desc::after {
+            content: "▼";
+            margin-left: 5px;
+            font-size: 12px;
+        }
+        
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        
+        .actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .table-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .actions {
+                margin-top: 10px;
+                justify-content: flex-start;
+            }
+            
+            .export-btn {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>K4 XML User Parser</h1>
+        
+        <div class="upload-section" id="upload-area">
+            <input type="file" id="file-input" class="file-input" accept=".xml">
+            <button class="upload-btn" id="upload-btn">Choose XML File</button>
+            <p class="drag-text">or drag and drop your XML file here</p>
+        </div>
+        
+        <div id="status" class="status hidden"></div>
+        
+        <div id="results-section" class="hidden">
+            <div class="table-controls">
+                <div class="column-toggle" id="column-toggle">
+                    <!-- Column checkboxes will be added here dynamically -->
+                </div>
+                <div class="actions">
+                    <button id="export-csv" class="export-btn">Export to CSV</button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="users-table">
+                    <thead>
+                        <tr id="table-header">
+                            <!-- Table headers will be added here dynamically -->
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Table rows will be added here dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading hidden">Processing XML file...</div>
+    </div>
+
+    <script>
+        // JavaScript code embedded in the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const fileInput = document.getElementById('file-input');
+            const uploadBtn = document.getElementById('upload-btn');
+            const uploadArea = document.getElementById('upload-area');
+            const statusDiv = document.getElementById('status');
+            const resultsSection = document.getElementById('results-section');
+            const columnToggle = document.getElementById('column-toggle');
+            const tableHeader = document.getElementById('table-header');
+            const tableBody = document.getElementById('table-body');
+            const loadingDiv = document.getElementById('loading');
+            const exportCsvBtn = document.getElementById('export-csv');
+            
+            // Table data and state
+            let userData = [];
+            let columns = [
+                { id: 'name', label: 'Name', visible: true },
+                { id: 'email', label: 'Email', visible: true },
+                { id: 'shortName', label: 'Short Name', visible: true }
+            ];
+            let sortConfig = {
+                key: null,
+                direction: 'asc',
+                secondaryKey: null,
+                secondaryDirection: 'asc'
+            };
+            
+            // Event listeners
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+            exportCsvBtn.addEventListener('click', exportToCsv);
+            
+            // Drag and drop functionality
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+            
+            // Function to handle file selection
+            function handleFileSelect(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    handleFile(file);
+                }
+            }
+            
+            // Function to handle the selected file
+            function handleFile(file) {
+                if (file.type !== 'text/xml' && !file.name.endsWith('.xml')) {
+                    showStatus('Please select an XML file.', 'error');
+                    return;
+                }
+                
+                showLoading(true);
+                showStatus('', '');
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        parseXML(e.target.result);
+                    } catch (error) {
+                        showStatus('Error parsing XML: ' + error.message, 'error');
+                        showLoading(false);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showStatus('Error reading file.', 'error');
+                    showLoading(false);
+                };
+                
+                reader.readAsText(file);
+            }
+            
+            // Function to parse XML and extract user data
+            function parseXML(xmlString) {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+                
+                // Check for parsing errors
+                const parserError = xmlDoc.querySelector('parsererror');
+                if (parserError) {
+                    throw new Error('Invalid XML format');
+                }
+                
+                // Find all user nodes
+                const userNodes = xmlDoc.querySelectorAll('user');
+                
+                if (userNodes.length === 0) {
+                    showStatus('No user data found in the XML file.', 'error');
+                    showLoading(false);
+                    return;
+                }
+                
+                // Extract user data
+                userData = Array.from(userNodes).map(userNode => {
+                    const userId = userNode.getAttribute('id') || '';
+                    const name = getNodeText(userNode, 'name');
+                    const email = getNodeText(userNode, 'email');
+                    const shortName = getNodeText(userNode, 'shortName');
+                    
+                    return {
+                        id: userId,
+                        name: name,
+                        email: email,
+                        shortName: shortName
+                    };
+                });
+                
+                // Initialize the table
+                initializeTable();
+                showStatus(`Successfully parsed ${userData.length} users from the XML file.`, 'success');
+                showLoading(false);
+            }
+            
+            // Helper function to get text content of a node
+            function getNodeText(parentNode, nodeName) {
+                const node = parentNode.querySelector(nodeName);
+                return node ? node.textContent : '';
+            }
+            
+            // Function to initialize the table
+            function initializeTable() {
+                // Create column toggles
+                createColumnToggles();
+                
+                // Create table headers
+                createTableHeaders();
+                
+                // Render table data
+                renderTableData();
+                
+                // Show results section
+                resultsSection.classList.remove('hidden');
+            }
+            
+            // Function to create column toggle checkboxes
+            function createColumnToggles() {
+                columnToggle.innerHTML = '';
+                
+                columns.forEach(column => {
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = column.visible;
+                    checkbox.dataset.column = column.id;
+                    
+                    checkbox.addEventListener('change', function() {
+                        const columnId = this.dataset.column;
+                        const columnIndex = columns.findIndex(col => col.id === columnId);
+                        
+                        if (columnIndex !== -1) {
+                            columns[columnIndex].visible = this.checked;
+                            updateColumnVisibility();
+                        }
+                    });
+                    
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(column.label));
+                    columnToggle.appendChild(label);
+                });
+            }
+            
+            // Function to create table headers
+            function createTableHeaders() {
+                tableHeader.innerHTML = '';
+                
+                columns.forEach(column => {
+                    const th = document.createElement('th');
+                    th.textContent = column.label;
+                    th.dataset.column = column.id;
+                    th.className = column.visible ? '' : 'hidden';
+                    
+                    // Add sort indicators if this column is sorted
+                    if (sortConfig.key === column.id) {
+                        th.classList.add(sortConfig.direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                    } else if (sortConfig.secondaryKey === column.id) {
+                        th.classList.add(sortConfig.secondaryDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                    }
+                    
+                    // Add click event for sorting
+                    th.addEventListener('click', function(e) {
+                        handleHeaderClick(column.id, e.shiftKey);
+                    });
+                    
+                    tableHeader.appendChild(th);
+                });
+            }
+            
+            // Function to handle header click for sorting
+            function handleHeaderClick(columnId, isShiftKey) {
+                if (isShiftKey) {
+                    // Secondary sort
+                    if (sortConfig.secondaryKey === columnId) {
+                        // Toggle direction if already sorting by this column
+                        sortConfig.secondaryDirection = sortConfig.secondaryDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        // Set as secondary sort column
+                        sortConfig.secondaryKey = columnId;
+                        sortConfig.secondaryDirection = 'asc';
+                    }
+                } else {
+                    // Primary sort
+                    if (sortConfig.key === columnId) {
+                        // Toggle direction if already sorting by this column
+                        sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        // Set as primary sort column
+                        sortConfig.key = columnId;
+                        sortConfig.direction = 'asc';
+                    }
+                    
+                    // Reset secondary sort if not shift-clicking
+                    sortConfig.secondaryKey = null;
+                    sortConfig.secondaryDirection = 'asc';
+                }
+                
+                // Update headers and re-render data
+                createTableHeaders();
+                renderTableData();
+            }
+            
+            // Function to update column visibility
+            function updateColumnVisibility() {
+                // Update header visibility
+                const headerCells = tableHeader.querySelectorAll('th');
+                headerCells.forEach(cell => {
+                    const columnId = cell.dataset.column;
+                    const column = columns.find(col => col.id === columnId);
+                    
+                    if (column) {
+                        cell.className = column.visible ? 
+                            cell.className.replace('hidden', '').trim() : 
+                            cell.className + ' hidden';
+                    }
+                });
+                
+                // Update data cell visibility
+                const rows = tableBody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    cells.forEach(cell => {
+                        const columnId = cell.dataset.column;
+                        const column = columns.find(col => col.id === columnId);
+                        
+                        if (column) {
+                            cell.className = column.visible ? '' : 'hidden';
+                        }
+                    });
+                });
+            }
+            
+            // Function to render table data
+            function renderTableData() {
+                // Sort the data
+                const sortedData = sortData();
+                
+                // Clear the table body
+                tableBody.innerHTML = '';
+                
+                // Add rows
+                sortedData.forEach(user => {
+                    const row = document.createElement('tr');
+                    
+                    columns.forEach(column => {
+                        const cell = document.createElement('td');
+                        cell.textContent = user[column.id] || '';
+                        cell.dataset.column = column.id;
+                        cell.className = column.visible ? '' : 'hidden';
+                        row.appendChild(cell);
+                    });
+                    
+                    tableBody.appendChild(row);
+                });
+            }
+            
+            // Function to sort data based on current sort configuration
+            function sortData() {
+                return [...userData].sort((a, b) => {
+                    // Primary sort
+                    if (sortConfig.key) {
+                        const valueA = (a[sortConfig.key] || '').toLowerCase();
+                        const valueB = (b[sortConfig.key] || '').toLowerCase();
+                        
+                        if (valueA < valueB) {
+                            return sortConfig.direction === 'asc' ? -1 : 1;
+                        }
+                        if (valueA > valueB) {
+                            return sortConfig.direction === 'asc' ? 1 : -1;
+                        }
+                    }
+                    
+                    // Secondary sort if primary values are equal
+                    if (sortConfig.secondaryKey) {
+                        const secondaryValueA = (a[sortConfig.secondaryKey] || '').toLowerCase();
+                        const secondaryValueB = (b[sortConfig.secondaryKey] || '').toLowerCase();
+                        
+                        if (secondaryValueA < secondaryValueB) {
+                            return sortConfig.secondaryDirection === 'asc' ? -1 : 1;
+                        }
+                        if (secondaryValueA > secondaryValueB) {
+                            return sortConfig.secondaryDirection === 'asc' ? 1 : -1;
+                        }
+                    }
+                    
+                    return 0;
+                });
+            }
+            
+            // Function to export table data to CSV
+            function exportToCsv() {
+                // Get visible columns in display order
+                const visibleColumns = columns.filter(column => column.visible);
+                
+                if (visibleColumns.length === 0 || userData.length === 0) {
+                    showStatus('No data to export.', 'error');
+                    return;
+                }
+                
+                // Get sorted data
+                const sortedData = sortData();
+                
+                // Create CSV header row
+                const headerRow = visibleColumns.map(column => escapeCsvValue(column.label));
+                
+                // Create CSV data rows
+                const dataRows = sortedData.map(user => {
+                    return visibleColumns.map(column => escapeCsvValue(user[column.id] || ''));
+                });
+                
+                // Combine all rows
+                const csvContent = [headerRow, ...dataRows].map(row => row.join(',')).join('\n');
+                
+                // Create a Blob and download link
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                
+                // Set download attributes
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'k4_users_export.csv');
+                link.style.display = 'none';
+                
+                // Add to document, trigger download, and clean up
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showStatus('CSV file exported successfully.', 'success');
+            }
+            
+            // Helper function to escape CSV values
+            function escapeCsvValue(value) {
+                // If the value contains commas, quotes, or newlines, wrap it in quotes
+                if (/[",\n\r]/.test(value)) {
+                    // Double any quotes within the value
+                    return '"' + value.replace(/"/g, '""') + '"';
+                }
+                return value;
+            }
+            
+            // Function to show status message
+            function showStatus(message, type) {
+                if (message) {
+                    statusDiv.textContent = message;
+                    statusDiv.className = `status ${type}`;
+                } else {
+                    statusDiv.className = 'status hidden';
+                }
+            }
+            
+            // Function to show/hide loading indicator
+            function showLoading(show) {
+                loadingDiv.className = show ? 'loading' : 'loading hidden';
+            }
+        });
+    </script>
+</body>
+</html>
