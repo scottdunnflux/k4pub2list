@@ -1,4 +1,4 @@
-# K4 Publication xml to List
+# K4 Publication XML to List
 
 A single page app to 
   - extract a user list from a standard K4 Publication XML file
