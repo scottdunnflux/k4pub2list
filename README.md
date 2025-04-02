@@ -31,6 +31,11 @@ and provides the ability to download it as a CSV file.
 * Click the URL for k4pub2list:
 * Upload your publication XML file
 * Hide/Show columns as needed
+   - Note the "Toggle All" check box.
+   - Toggle sections or scroll through the boxes to see
+      - User Rights
+      - Section Membership
+      - Client Access
 * Sort columns by clicking the column header clicking additional times to change the order of the sort.
 * Hold shift key while clicking column headers to add the column as a secondary sorting column.
 * Click `Export CSV` button to download the list as a CSV file.
