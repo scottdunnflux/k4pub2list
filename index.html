@@ -226,6 +226,11 @@
             font-style: italic;
         }
         
+        .client-column {
+            text-align: center;
+            font-weight: bold;
+        }
+        
         .separator {
             width: 100%;
             border-bottom: 1px solid #ccc;
@@ -251,12 +256,11 @@
 </head>
 <body>
     <div class="container">
-        <h1 align="center">K4 Publication XML User Parser </h1>
-        <p align="center">Brought to you by <a href="https://fluxconsulting.com/">Flux Consulting, Inc</a>. — <i>Delivering publishing solutions since 1996.</i>.</p>
+        <h1>K4 XML User Parser</h1>
         
         <div class="upload-section" id="upload-area">
             <input type="file" id="file-input" class="file-input" accept=".xml">
-            <button class="upload-btn" id="upload-btn">Choose K4 Publication XML File</button>
+            <button class="upload-btn" id="upload-btn">Choose XML File</button>
             <p class="drag-text">or drag and drop your XML file here</p>
         </div>
         
@@ -315,6 +319,19 @@
                 direction: 'asc',
                 secondaryKey: null,
                 secondaryDirection: 'asc'
+            };
+            
+            // Client access mapping
+            const clientAccessMap = {
+                '1': 'K4ADMIN',
+                '2': 'K4LAYOUT',
+                '3': 'K4EDIT',
+                '4': 'K4OVERVIEW',
+                '5': 'K4CONTENTPORTAL',
+                '6': 'K4HTMLSNIPPETEDITOR',
+                '7': 'K4FILEMANGER',
+                '8': 'K4WEBEDITORICML',
+                '9': 'K4XMLEXPORTER'
             };
             
             // Event listeners
@@ -448,6 +465,17 @@
                     });
                 });
                 
+                // Add client access columns
+                Object.values(clientAccessMap).forEach(clientName => {
+                    columns.push({
+                        id: `client_${clientName}`,
+                        label: clientName,
+                        visible: true,
+                        group: 'clients',
+                        isClient: true
+                    });
+                });
+                
                 // Extract user data
                 userData = Array.from(userNodes).map(userNode => {
                     const userId = userNode.getAttribute('id') || '';
@@ -491,12 +519,23 @@
                             userSections.get(sectionName) : '';
                     });
                     
+                    // Get user client accesses
+                    const userClientAccesses = new Set();
+                    userNode.querySelectorAll('userClientAccesses userClientAccess clientID').forEach(clientIdNode => {
+                        userClientAccesses.add(clientIdNode.textContent);
+                    });
+                    
+                    // Add client accesses as properties (1 for true, 0 for false)
+                    Object.entries(clientAccessMap).forEach(([clientId, clientName]) => {
+                        user[`client_${clientName}`] = userClientAccesses.has(clientId) ? 1 : 0;
+                    });
+                    
                     return user;
                 });
                 
                 // Initialize the table
                 initializeTable();
-                showStatus(`Successfully parsed ${userData.length} users with ${rightTypesArray.length} rights and ${sectionNamesArray.length} sections.`, 'success');
+                showStatus(`Successfully parsed ${userData.length} users with ${rightTypesArray.length} rights, ${sectionNamesArray.length} sections, and ${Object.keys(clientAccessMap).length} client access types.`, 'success');
                 showLoading(false);
             }
             
@@ -562,7 +601,8 @@
                 const groups = {
                     basic: { title: 'Basic Information', columns: [] },
                     rights: { title: 'User Rights', columns: [] },
-                    sections: { title: 'Section Membership', columns: [] }
+                    sections: { title: 'Section Membership', columns: [] },
+                    clients: { title: 'Client Access', columns: [] }
                 };
                 
                 // Populate groups
@@ -744,6 +784,8 @@
                                     cell.classList.add('right-column');
                                 } else if (column.isSection) {
                                     cell.classList.add('section-column');
+                                } else if (column.isClient) {
+                                    cell.classList.add('client-column');
                                 }
                             } else {
                                 cell.classList.add('hidden');
@@ -769,10 +811,10 @@
                         const cell = document.createElement('td');
                         cell.dataset.column = column.id;
                         
-                        if (column.isRight) {
-                            // For rights columns, display 1 or 0
+                        if (column.isRight || column.isClient) {
+                            // For rights and client columns, display 1 or 0
                             cell.textContent = user[column.id];
-                            cell.className = column.visible ? 'right-column' : 'hidden';
+                            cell.className = column.visible ? (column.isClient ? 'client-column' : 'right-column') : 'hidden';
                         } else if (column.isSection) {
                             // For section columns, display category name or empty
                             cell.textContent = user[column.id] || '';
