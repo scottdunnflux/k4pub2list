@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flux K4 XML User List Parser</title>
+    <title>K4 XML User Parser</title>
     <style>
         /* CSS styles embedded in the page */
         body {
@@ -83,6 +83,11 @@
             gap: 10px;
             flex-wrap: wrap;
             margin-bottom: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
         }
         
         .column-toggle label {
@@ -90,10 +95,50 @@
             align-items: center;
             margin-right: 10px;
             cursor: pointer;
+            white-space: nowrap;
         }
         
         .column-toggle input {
             margin-right: 5px;
+        }
+        
+        .column-group {
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        
+        .column-group-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        
+        .column-group-title:hover {
+            color: #4a90e2;
+        }
+        
+        .column-group-title::before {
+            content: "▼";
+            margin-right: 5px;
+            font-size: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .column-group-title.collapsed::before {
+            transform: rotate(-90deg);
+        }
+        
+        .column-group-content {
+            margin-left: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .column-group-content.collapsed {
+            display: none;
         }
         
         .table-container {
@@ -173,6 +218,20 @@
             margin-bottom: 15px;
         }
         
+        .right-column {
+            text-align: center;
+        }
+        
+        .section-column {
+            font-style: italic;
+        }
+        
+        .separator {
+            width: 100%;
+            border-bottom: 1px solid #ccc;
+            margin: 10px 0;
+        }
+        
         @media (max-width: 768px) {
             .table-controls {
                 flex-direction: column;
@@ -192,11 +251,12 @@
 </head>
 <body>
     <div class="container">
-        <h1 align="center">K4 XML User Parser </h1>
-        <p align="center"><a href="https://fluxconsulting.com/">by Flux Consulting, Inc.</a></p>
+        <h1 align="center">K4 Publication XML User Parser </h1>
+        <p align="center">Brought to you by <a href="https://fluxconsulting.com/">Flux Consulting, Inc</a>. — <i>Delivering publishing solutions since 1996.</i>.</p>
+        
         <div class="upload-section" id="upload-area">
             <input type="file" id="file-input" class="file-input" accept=".xml">
-            <button class="upload-btn" id="upload-btn">Choose XML File</button>
+            <button class="upload-btn" id="upload-btn">Choose K4 Publication XML File</button>
             <p class="drag-text">or drag and drop your XML file here</p>
         </div>
         
@@ -230,7 +290,6 @@
     </div>
 
     <script>
-        // JavaScript code embedded in the page
         document.addEventListener('DOMContentLoaded', function() {
             // DOM elements
             const fileInput = document.getElementById('file-input');
@@ -247,9 +306,9 @@
             // Table data and state
             let userData = [];
             let columns = [
-                { id: 'name', label: 'Name', visible: true },
-                { id: 'email', label: 'Email', visible: true },
-                { id: 'shortName', label: 'Short Name', visible: true }
+                { id: 'name', label: 'Name', visible: true, group: 'basic' },
+                { id: 'email', label: 'Email', visible: true, group: 'basic' },
+                { id: 'shortName', label: 'Short Name', visible: true, group: 'basic' }
             ];
             let sortConfig = {
                 key: null,
@@ -259,21 +318,24 @@
             };
             
             // Event listeners
-            uploadBtn.addEventListener('click', () => fileInput.click());
+            uploadBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
             fileInput.addEventListener('change', handleFileSelect);
             exportCsvBtn.addEventListener('click', exportToCsv);
             
             // Drag and drop functionality
-            uploadArea.addEventListener('dragover', (e) => {
+            uploadArea.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 uploadArea.classList.add('dragover');
             });
             
-            uploadArea.addEventListener('dragleave', () => {
+            uploadArea.addEventListener('dragleave', function() {
                 uploadArea.classList.remove('dragover');
             });
             
-            uploadArea.addEventListener('drop', (e) => {
+            uploadArea.addEventListener('drop', function(e) {
                 e.preventDefault();
                 uploadArea.classList.remove('dragover');
                 
@@ -339,6 +401,53 @@
                     return;
                 }
                 
+                // Find all distinct rightType values across all users
+                const allRightTypes = new Set();
+                xmlDoc.querySelectorAll('user rights right rightType').forEach(rightTypeNode => {
+                    allRightTypes.add(rightTypeNode.textContent);
+                });
+                
+                // Convert to array and sort alphabetically
+                const rightTypesArray = Array.from(allRightTypes).sort();
+                
+                // Find all distinct section names across all users
+                const allSectionNames = new Set();
+                xmlDoc.querySelectorAll('user userInSections userInSection sectionName-ref').forEach(sectionNameNode => {
+                    allSectionNames.add(sectionNameNode.textContent);
+                });
+                
+                // Convert to array and sort alphabetically
+                const sectionNamesArray = Array.from(allSectionNames).sort();
+                
+                // Reset columns to include basic user info
+                columns = [
+                    { id: 'name', label: 'Name', visible: true, group: 'basic' },
+                    { id: 'email', label: 'Email', visible: true, group: 'basic' },
+                    { id: 'shortName', label: 'Short Name', visible: true, group: 'basic' }
+                ];
+                
+                // Add right columns
+                rightTypesArray.forEach(rightType => {
+                    columns.push({
+                        id: `right_${rightType}`,
+                        label: rightType,
+                        visible: true,
+                        group: 'rights',
+                        isRight: true
+                    });
+                });
+                
+                // Add section columns
+                sectionNamesArray.forEach(sectionName => {
+                    columns.push({
+                        id: `section_${sectionName}`,
+                        label: sectionName,
+                        visible: true,
+                        group: 'sections',
+                        isSection: true
+                    });
+                });
+                
                 // Extract user data
                 userData = Array.from(userNodes).map(userNode => {
                     const userId = userNode.getAttribute('id') || '';
@@ -346,17 +455,48 @@
                     const email = getNodeText(userNode, 'email');
                     const shortName = getNodeText(userNode, 'shortName');
                     
-                    return {
+                    // Create user object with basic info
+                    const user = {
                         id: userId,
                         name: name,
                         email: email,
                         shortName: shortName
                     };
+                    
+                    // Get user rights
+                    const userRights = new Set();
+                    userNode.querySelectorAll('rights right rightType').forEach(rightTypeNode => {
+                        userRights.add(rightTypeNode.textContent);
+                    });
+                    
+                    // Add rights as properties (1 for true, 0 for false)
+                    rightTypesArray.forEach(rightType => {
+                        user[`right_${rightType}`] = userRights.has(rightType) ? 1 : 0;
+                    });
+                    
+                    // Get user sections and categories
+                    const userSections = new Map();
+                    userNode.querySelectorAll('userInSections userInSection').forEach(sectionNode => {
+                        const sectionName = getNodeText(sectionNode, 'sectionName-ref');
+                        const categoryName = getNodeText(sectionNode, 'userCategoryName-ref');
+                        
+                        if (sectionName && categoryName) {
+                            userSections.set(sectionName, categoryName);
+                        }
+                    });
+                    
+                    // Add sections as properties (with category name or empty string)
+                    sectionNamesArray.forEach(sectionName => {
+                        user[`section_${sectionName}`] = userSections.has(sectionName) ? 
+                            userSections.get(sectionName) : '';
+                    });
+                    
+                    return user;
                 });
                 
                 // Initialize the table
                 initializeTable();
-                showStatus(`Successfully parsed ${userData.length} users from the XML file.`, 'success');
+                showStatus(`Successfully parsed ${userData.length} users with ${rightTypesArray.length} rights and ${sectionNamesArray.length} sections.`, 'success');
                 showLoading(false);
             }
             
@@ -385,26 +525,133 @@
             function createColumnToggles() {
                 columnToggle.innerHTML = '';
                 
-                columns.forEach(column => {
-                    const label = document.createElement('label');
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.checked = column.visible;
-                    checkbox.dataset.column = column.id;
+                // Create a select/deselect all checkbox
+                const allLabel = document.createElement('label');
+                const allCheckbox = document.createElement('input');
+                allCheckbox.type = 'checkbox';
+                allCheckbox.checked = true;
+                allCheckbox.id = 'toggle-all';
+                
+                allCheckbox.addEventListener('change', function() {
+                    const isChecked = this.checked;
                     
-                    checkbox.addEventListener('change', function() {
-                        const columnId = this.dataset.column;
-                        const columnIndex = columns.findIndex(col => col.id === columnId);
-                        
-                        if (columnIndex !== -1) {
-                            columns[columnIndex].visible = this.checked;
-                            updateColumnVisibility();
-                        }
+                    // Update all column checkboxes
+                    document.querySelectorAll('#column-toggle input[type="checkbox"]:not(#toggle-all)').forEach(checkbox => {
+                        checkbox.checked = isChecked;
                     });
                     
-                    label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(column.label));
-                    columnToggle.appendChild(label);
+                    // Update column visibility
+                    columns.forEach(column => {
+                        column.visible = isChecked;
+                    });
+                    
+                    updateColumnVisibility();
+                });
+                
+                allLabel.appendChild(allCheckbox);
+                allLabel.appendChild(document.createTextNode('Toggle All'));
+                allLabel.style.fontWeight = 'bold';
+                columnToggle.appendChild(allLabel);
+                
+                // Add a separator
+                const separator = document.createElement('div');
+                separator.className = 'separator';
+                columnToggle.appendChild(separator);
+                
+                // Group columns by type
+                const groups = {
+                    basic: { title: 'Basic Information', columns: [] },
+                    rights: { title: 'User Rights', columns: [] },
+                    sections: { title: 'Section Membership', columns: [] }
+                };
+                
+                // Populate groups
+                columns.forEach(column => {
+                    if (groups[column.group]) {
+                        groups[column.group].columns.push(column);
+                    }
+                });
+                
+                // Create groups in the UI
+                Object.keys(groups).forEach(groupKey => {
+                    const group = groups[groupKey];
+                    
+                    if (group.columns.length === 0) return;
+                    
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'column-group';
+                    
+                    // Create group title
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'column-group-title';
+                    titleDiv.textContent = group.title;
+                    
+                    // Create group content
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'column-group-content';
+                    
+                    // Add toggle functionality to group title
+                    titleDiv.addEventListener('click', function() {
+                        this.classList.toggle('collapsed');
+                        contentDiv.classList.toggle('collapsed');
+                    });
+                    
+                    // Add group toggle checkbox
+                    const groupLabel = document.createElement('label');
+                    const groupCheckbox = document.createElement('input');
+                    groupCheckbox.type = 'checkbox';
+                    groupCheckbox.checked = true;
+                    groupCheckbox.dataset.group = groupKey;
+                    
+                    groupCheckbox.addEventListener('change', function() {
+                        const isChecked = this.checked;
+                        const groupName = this.dataset.group;
+                        
+                        // Update all checkboxes in this group
+                        contentDiv.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                            checkbox.checked = isChecked;
+                        });
+                        
+                        // Update column visibility for this group
+                        columns.forEach(column => {
+                            if (column.group === groupName) {
+                                column.visible = isChecked;
+                            }
+                        });
+                        
+                        updateColumnVisibility();
+                    });
+                    
+                    groupLabel.appendChild(groupCheckbox);
+                    groupLabel.appendChild(document.createTextNode('Toggle All'));
+                    contentDiv.appendChild(groupLabel);
+                    
+                    // Add individual column checkboxes
+                    group.columns.forEach(column => {
+                        const label = document.createElement('label');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.checked = column.visible;
+                        checkbox.dataset.column = column.id;
+                        
+                        checkbox.addEventListener('change', function() {
+                            const columnId = this.dataset.column;
+                            const columnIndex = columns.findIndex(col => col.id === columnId);
+                            
+                            if (columnIndex !== -1) {
+                                columns[columnIndex].visible = this.checked;
+                                updateColumnVisibility();
+                            }
+                        });
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(column.label));
+                        contentDiv.appendChild(label);
+                    });
+                    
+                    groupDiv.appendChild(titleDiv);
+                    groupDiv.appendChild(contentDiv);
+                    columnToggle.appendChild(groupDiv);
                 });
             }
             
@@ -491,7 +738,16 @@
                         const column = columns.find(col => col.id === columnId);
                         
                         if (column) {
-                            cell.className = column.visible ? '' : 'hidden';
+                            if (column.visible) {
+                                cell.classList.remove('hidden');
+                                if (column.isRight) {
+                                    cell.classList.add('right-column');
+                                } else if (column.isSection) {
+                                    cell.classList.add('section-column');
+                                }
+                            } else {
+                                cell.classList.add('hidden');
+                            }
                         }
                     });
                 });
@@ -511,9 +767,22 @@
                     
                     columns.forEach(column => {
                         const cell = document.createElement('td');
-                        cell.textContent = user[column.id] || '';
                         cell.dataset.column = column.id;
-                        cell.className = column.visible ? '' : 'hidden';
+                        
+                        if (column.isRight) {
+                            // For rights columns, display 1 or 0
+                            cell.textContent = user[column.id];
+                            cell.className = column.visible ? 'right-column' : 'hidden';
+                        } else if (column.isSection) {
+                            // For section columns, display category name or empty
+                            cell.textContent = user[column.id] || '';
+                            cell.className = column.visible ? 'section-column' : 'hidden';
+                        } else {
+                            // For regular columns
+                            cell.textContent = user[column.id] || '';
+                            cell.className = column.visible ? '' : 'hidden';
+                        }
+                        
                         row.appendChild(cell);
                     });
                     
@@ -526,27 +795,51 @@
                 return [...userData].sort((a, b) => {
                     // Primary sort
                     if (sortConfig.key) {
-                        const valueA = (a[sortConfig.key] || '').toLowerCase();
-                        const valueB = (b[sortConfig.key] || '').toLowerCase();
+                        const valueA = a[sortConfig.key];
+                        const valueB = b[sortConfig.key];
                         
-                        if (valueA < valueB) {
-                            return sortConfig.direction === 'asc' ? -1 : 1;
-                        }
-                        if (valueA > valueB) {
-                            return sortConfig.direction === 'asc' ? 1 : -1;
+                        // Handle numeric values (for rights columns)
+                        if (typeof valueA === 'number' && typeof valueB === 'number') {
+                            if (valueA !== valueB) {
+                                return sortConfig.direction === 'asc' ? valueA - valueB : valueB - valueA;
+                            }
+                        } else {
+                            // Handle string values
+                            const strA = (valueA || '').toString().toLowerCase();
+                            const strB = (valueB || '').toString().toLowerCase();
+                            
+                            if (strA < strB) {
+                                return sortConfig.direction === 'asc' ? -1 : 1;
+                            }
+                            if (strA > strB) {
+                                return sortConfig.direction === 'asc' ? 1 : -1;
+                            }
                         }
                     }
                     
                     // Secondary sort if primary values are equal
                     if (sortConfig.secondaryKey) {
-                        const secondaryValueA = (a[sortConfig.secondaryKey] || '').toLowerCase();
-                        const secondaryValueB = (b[sortConfig.secondaryKey] || '').toLowerCase();
+                        const secondaryValueA = a[sortConfig.secondaryKey];
+                        const secondaryValueB = b[sortConfig.secondaryKey];
                         
-                        if (secondaryValueA < secondaryValueB) {
-                            return sortConfig.secondaryDirection === 'asc' ? -1 : 1;
-                        }
-                        if (secondaryValueA > secondaryValueB) {
-                            return sortConfig.secondaryDirection === 'asc' ? 1 : -1;
+                        // Handle numeric values (for rights columns)
+                        if (typeof secondaryValueA === 'number' && typeof secondaryValueB === 'number') {
+                            if (secondaryValueA !== secondaryValueB) {
+                                return sortConfig.secondaryDirection === 'asc' ? 
+                                    secondaryValueA - secondaryValueB : 
+                                    secondaryValueB - secondaryValueA;
+                            }
+                        } else {
+                            // Handle string values
+                            const strA = (secondaryValueA || '').toString().toLowerCase();
+                            const strB = (secondaryValueB || '').toString().toLowerCase();
+                            
+                            if (strA < strB) {
+                                return sortConfig.secondaryDirection === 'asc' ? -1 : 1;
+                            }
+                            if (strA > strB) {
+                                return sortConfig.secondaryDirection === 'asc' ? 1 : -1;
+                            }
                         }
                     }
                     
@@ -572,7 +865,7 @@
                 
                 // Create CSV data rows
                 const dataRows = sortedData.map(user => {
-                    return visibleColumns.map(column => escapeCsvValue(user[column.id] || ''));
+                    return visibleColumns.map(column => escapeCsvValue(user[column.id] !== undefined ? user[column.id] : ''));
                 });
                 
                 // Combine all rows
@@ -599,12 +892,15 @@
             
             // Helper function to escape CSV values
             function escapeCsvValue(value) {
+                // Convert to string
+                const str = String(value);
+                
                 // If the value contains commas, quotes, or newlines, wrap it in quotes
-                if (/[",\n\r]/.test(value)) {
+                if (/[",\n\r]/.test(str)) {
                     // Double any quotes within the value
-                    return '"' + value.replace(/"/g, '""') + '"';
+                    return '"' + str.replace(/"/g, '""') + '"';
                 }
-                return value;
+                return str;
             }
             
             // Function to show status message
