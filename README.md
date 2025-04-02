@@ -52,6 +52,8 @@ This SPA was developed by Scott Dunn at [Flux Consulting, Inc.](https://fluxcons
 
 * 2025-03-27
     * Inital version
+* 2025-04-02
+    * Added User Rights, Section Membership, and Client Access sections
 
 ## License
 
