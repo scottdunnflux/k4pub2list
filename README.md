@@ -9,19 +9,19 @@ A single page app to
 
 vjoon K4 Server sofware allows K4 Administrators to download a publication XML file
 that contains all settings necessary to create an entire publication. 
-This application extracts a small subset of that information to create a user list
-and provides the ability to download it as a CSV file.
+This web page application makes use of that publication xml file extracting a subset of that information to create a user list
+that can be download as a CSV file.
 
 ## Getting Started
 
 ### Dependencies
 
-* The SPA runs on most web browsers released after 2022.
-* The SPA requires an internet conncetion to load JavaScript and CSS libraries.
+* This SPA runs on most web browsers released after 2022.
+* This SPA requires an internet conncetion to load JavaScript and CSS libraries.
 
 ### Installing
 
-* The SPA is available for use [here](https://scottdunnflux.github.io/k4pub2list/)
+* This SPA is available for use [here](https://scottdunnflux.github.io/k4pub2list/)
 * Alternatively, the file may be downloaded and opened in a browser.
 
 ### Using k4pub2list
@@ -34,6 +34,7 @@ and provides the ability to download it as a CSV file.
    - Note the "Toggle All" check box.
    - Toggle sections or scroll through the boxes to see
       - User Rights
+      - User Rights via Category (to see which rights are infered through section membership user categories)
       - Section Membership
       - Client Access
 * Sort columns by clicking the column header clicking additional times to change the order of the sort.
@@ -54,6 +55,8 @@ This SPA was developed by Scott Dunn at [Flux Consulting, Inc.](https://fluxcons
     * Inital version
 * 2025-04-02
     * Added User Rights, Section Membership, and Client Access sections
+* 2025-04-15
+    * Added User Rights via Category showing when a user has rights due to the user category associated with their section membership.
 
 ## License
 
