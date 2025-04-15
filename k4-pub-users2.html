@@ -231,6 +231,11 @@
             font-weight: bold;
         }
         
+        .category-right-column {
+            font-size: 0.9em;
+            color: #555;
+        }
+        
         .separator {
             width: 100%;
             border-bottom: 1px solid #ccc;
@@ -261,7 +266,7 @@
         
         <div class="upload-section" id="upload-area">
             <input type="file" id="file-input" class="file-input" accept=".xml">
-            <button class="upload-btn" id="upload-btn">Choose K4 Publication XML File</button>
+            <button class="upload-btn" id="upload-btn">Choose XML File</button>
             <p class="drag-text">or drag and drop your XML file here</p>
         </div>
         
@@ -425,6 +430,11 @@
                     allRightTypes.add(rightTypeNode.textContent);
                 });
                 
+                // Also check rights in userCategory nodes
+                xmlDoc.querySelectorAll('userCategory rights right rightType').forEach(rightTypeNode => {
+                    allRightTypes.add(rightTypeNode.textContent);
+                });
+                
                 // Convert to array and sort alphabetically
                 const rightTypesArray = Array.from(allRightTypes).sort();
                 
@@ -436,6 +446,19 @@
                 
                 // Convert to array and sort alphabetically
                 const sectionNamesArray = Array.from(allSectionNames).sort();
+                
+                // Build a map of category rights
+                const categoryRightsMap = new Map();
+                xmlDoc.querySelectorAll('userCategory').forEach(categoryNode => {
+                    const categoryName = getNodeText(categoryNode, 'name');
+                    if (categoryName) {
+                        const categoryRights = new Set();
+                        categoryNode.querySelectorAll('rights right rightType').forEach(rightTypeNode => {
+                            categoryRights.add(rightTypeNode.textContent);
+                        });
+                        categoryRightsMap.set(categoryName, categoryRights);
+                    }
+                });
                 
                 // Reset columns to include basic user info
                 columns = [
@@ -452,6 +475,17 @@
                         visible: true,
                         group: 'rights',
                         isRight: true
+                    });
+                });
+                
+                // Add right via category columns
+                rightTypesArray.forEach(rightType => {
+                    columns.push({
+                        id: `right_${rightType}_via_category`,
+                        label: `${rightType} via category`,
+                        visible: true,
+                        group: 'category_rights',
+                        isCategoryRight: true
                     });
                 });
                 
@@ -531,6 +565,27 @@
                         user[`client_${clientName}`] = userClientAccesses.has(clientId) ? 1 : 0;
                     });
                     
+                    // Process rights via category
+                    rightTypesArray.forEach(rightType => {
+                        let rightResults = '';
+                        
+                        // Check each section/category pair for this user
+                        userSections.forEach((categoryName, sectionName) => {
+                            // Check if this category grants this right
+                            const categoryRights = categoryRightsMap.get(categoryName);
+                            if (categoryRights && categoryRights.has(rightType)) {
+                                // Append this section/category pair to results
+                                if (rightResults !== '') {
+                                    rightResults += ', ';
+                                }
+                                rightResults += `(${sectionName},${categoryName})`;
+                            }
+                        });
+                        
+                        // Add the category rights property
+                        user[`right_${rightType}_via_category`] = rightResults;
+                    });
+                    
                     return user;
                 });
                 
@@ -602,6 +657,7 @@
                 const groups = {
                     basic: { title: 'Basic Information', columns: [] },
                     rights: { title: 'User Rights', columns: [] },
+                    category_rights: { title: 'User Rights via Category', columns: [] },
                     sections: { title: 'Section Membership', columns: [] },
                     clients: { title: 'Client Access', columns: [] }
                 };
@@ -787,6 +843,8 @@
                                     cell.classList.add('section-column');
                                 } else if (column.isClient) {
                                     cell.classList.add('client-column');
+                                } else if (column.isCategoryRight) {
+                                    cell.classList.add('category-right-column');
                                 }
                             } else {
                                 cell.classList.add('hidden');
@@ -820,6 +878,10 @@
                             // For section columns, display category name or empty
                             cell.textContent = user[column.id] || '';
                             cell.className = column.visible ? 'section-column' : 'hidden';
+                        } else if (column.isCategoryRight) {
+                            // For category rights columns, display section/category pairs
+                            cell.textContent = user[column.id] || '';
+                            cell.className = column.visible ? 'category-right-column' : 'hidden';
                         } else {
                             // For regular columns
                             cell.textContent = user[column.id] || '';
