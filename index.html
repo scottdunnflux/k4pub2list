@@ -41,7 +41,7 @@
             display: none;
         }
         
-        .upload-btn, .export-btn {
+        .upload-btn, .export-btn, .help-btn {
             background-color: #4a90e2;
             color: white;
             padding: 10px 20px;
@@ -57,12 +57,21 @@
             margin-left: 10px;
         }
         
+        .help-btn {
+            background-color: #6c757d;
+            margin-left: 10px;
+        }
+        
         .upload-btn:hover {
             background-color: #357abd;
         }
         
         .export-btn:hover {
             background-color: #218838;
+        }
+        
+        .help-btn:hover {
+            background-color: #5a6268;
         }
         
         .drag-text {
@@ -242,6 +251,64 @@
             margin: 10px 0;
         }
         
+        /* Help section styles */
+        .help-container {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .help-container h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        
+        .help-container img {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 800px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+        }
+        
         @media (max-width: 768px) {
             .table-controls {
                 flex-direction: column;
@@ -253,21 +320,35 @@
                 justify-content: flex-start;
             }
             
-            .export-btn {
+            .export-btn, .help-btn {
                 margin-left: 0;
+                margin-right: 10px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 align="center">K4 Publication XML User Parser </h1>
+        <h1 align="center">K4 Admin User List XML Parser </h1>
         <p align="center">Brought to you by <a href="https://fluxconsulting.com/">Flux Consulting, Inc</a>. — <i>publishing solutions since 1996</i>.</p>
         
         <div class="upload-section" id="upload-area">
             <input type="file" id="file-input" class="file-input" accept=".xml">
             <button class="upload-btn" id="upload-btn">Choose XML File</button>
+            <button class="help-btn" id="help-btn">How to Export XML</button>
             <p class="drag-text">or drag and drop your XML file here</p>
+        </div>
+        
+        <!-- Help Modal -->
+        <div id="help-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="xmlhow-container">
+                    <h3>How to export K4 User XML</h3>
+                    <p>K4 User data may be exported from the <b>Users</b> section of K4 Admin by selecting the users to export, then clicking the Export Users button.</p>
+                    <p><img id="export-users-img" src="data:image/png;base64,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" alt="Export Users from K4 Admin"/></p>
+                </div>
+            </div>
         </div>
         
         <div id="status" class="status hidden"></div>
@@ -304,6 +385,7 @@
             // DOM elements
             const fileInput = document.getElementById('file-input');
             const uploadBtn = document.getElementById('upload-btn');
+            const helpBtn = document.getElementById('help-btn');
             const uploadArea = document.getElementById('upload-area');
             const statusDiv = document.getElementById('status');
             const resultsSection = document.getElementById('results-section');
@@ -312,6 +394,8 @@
             const tableBody = document.getElementById('table-body');
             const loadingDiv = document.getElementById('loading');
             const exportCsvBtn = document.getElementById('export-csv');
+            const helpModal = document.getElementById('help-modal');
+            const closeModal = document.querySelector('.close');
             
             // Table data and state
             let userData = [];
@@ -345,8 +429,28 @@
                 fileInput.click();
             });
             
+            helpBtn.addEventListener('click', function() {
+                helpModal.style.display = 'block';
+            });
+            
+            closeModal.addEventListener('click', function() {
+                helpModal.style.display = 'none';
+            });
+            
+            window.addEventListener('click', function(event) {
+                if (event.target === helpModal) {
+                    helpModal.style.display = 'none';
+                }
+            });
+            
             fileInput.addEventListener('change', handleFileSelect);
             exportCsvBtn.addEventListener('click', exportToCsv);
+            
+            // Handle missing image
+            document.getElementById('export-users-img').addEventListener('error', function() {
+                this.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22800%22%20height%3D%22400%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20800%20400%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_1%20text%20%7B%20fill%3A%23999%3Bfont-weight%3Anormal%3Bfont-family%3AArial%2C%20Helvetica%2C%20Open%20Sans%2C%20sans-serif%2C%20monospace%3Bfont-size%3A40pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_1%22%3E%3Crect%20width%3D%22800%22%20height%3D%22400%22%20fill%3D%22%23E5E5E5%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%22285%22%20y%3D%22220%22%3EExport%20Users%20Image%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E';
+                this.alt = 'Export Users Image (Placeholder)';
+            });
             
             // Drag and drop functionality
             uploadArea.addEventListener('dragover', function(e) {
